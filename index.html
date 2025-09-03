@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure Chat</title>
+    <style>
+        body { font-family: sans-serif; }
+        #app { display: flex; height: 100vh; }
+        #inbox { width: 300px; padding: 15px; border-right: 1px solid #ddd; }
+        #inbox-list { list-style: none; padding: 0; }
+        .inbox-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        #new-message-btn { width: 100%; padding: 10px; }
+        #chat-room { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; }
+        #messages-container { flex-grow: 1; overflow-y: auto; padding: 10px; }
+        .message { padding: 8px; margin-bottom: 5px; background-color: #f0f0f0; border-radius: 8px; }
+        .message.my-message { background-color: #cce7ff; margin-left: auto; text-align: right; }
+        #message-input-area { display: flex; padding-top: 10px; border-top: 1px solid #ddd; }
+        #message-input { flex-grow: 1; padding: 10px; }
+        #send-btn { padding: 10px; }
+        .status-online { color: green; font-weight: bold; }
+        .typing-indicator { font-style: italic; color: #888; }
+        .reply-message { color: blue; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="inbox">
+            <h3>Your Inbox</h3>
+            <button id="new-message-btn">New Message</button>
+            <ul id="inbox-list"></ul>
+        </div>
+        <div id="chat-room">
+            <h4 id="chat-header"></h4>
+            <div id="messages-container"></div>
+            <div id="status-display"></div>
+            <div id="message-input-area">
+                <input type="text" id="message-input" placeholder="Type a message...">
+                <button id="send-btn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
