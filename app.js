@@ -1,7 +1,6 @@
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import { getDatabase, ref, push, set, get, query, orderByChild, equalTo, onValue, onDisconnect, update, remove } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-// Ensure firebaseApp is available from the HTML script tag
 const app = window.firebaseApp;
 const auth = getAuth(app);
 const database = getDatabase(app);
@@ -31,18 +30,26 @@ function initApp() {
     if (inviteId) {
         joinConversation(inviteId);
     } else {
-        renderInbox();
+        showInboxScreen();
     }
 
-    // Set user online status
     const userStatusRef = ref(database, 'status/' + currentUser.uid);
     onDisconnect(userStatusRef).update({ online: false });
     update(userStatusRef, { online: true });
 }
 
-function renderInbox() {
-    // This part would need more complex logic to list conversations
+function showInboxScreen() {
+    document.getElementById('inbox-screen').classList.add('active');
+    document.getElementById('chat-screen').classList.remove('active');
     document.getElementById('new-message-btn').onclick = createNewConversation;
+}
+
+function showChatScreen() {
+    document.getElementById('inbox-screen').classList.remove('active');
+    document.getElementById('chat-screen').classList.add('active');
+    document.getElementById('back-to-inbox-btn').onclick = showInboxScreen;
+    document.getElementById('send-btn').onclick = sendMessage;
+    document.getElementById('message-input').onkeyup = handleTyping;
 }
 
 function createNewConversation() {
@@ -93,6 +100,7 @@ function joinConversation(inviteId) {
 
 function openChatRoom(conversationId) {
     currentConversationId = conversationId;
+    showChatScreen();
     document.getElementById('messages-container').innerHTML = '';
     
     const messagesRef = ref(database, 'messages/' + conversationId);
@@ -107,22 +115,21 @@ function openChatRoom(conversationId) {
     const statusRef = ref(database, 'status');
     onValue(statusRef, (snapshot) => {
         const statuses = snapshot.val();
-        // This function needs a way to determine the other user's ID
-        // For a one-on-one chat, you'd fetch the other member from the conversation's `members` object
-        const otherUserId = "otherUserIdPlaceholder"; 
-
+        const otherUserId = getOtherUser(conversationId);
+        
         const statusDisplay = document.getElementById('status-display');
-        if (statuses && statuses[otherUserId] && statuses[otherUserId].typing === conversationId) {
-            statusDisplay.textContent = 'Typing...';
-        } else if (statuses && statuses[otherUserId] && statuses[otherUserId].online) {
-            statusDisplay.textContent = 'Online';
+        if (statuses && statuses[otherUserId]) {
+            if (statuses[otherUserId].typing === conversationId) {
+                statusDisplay.textContent = 'Typing...';
+            } else if (statuses[otherUserId].online) {
+                statusDisplay.textContent = 'Online';
+            } else {
+                statusDisplay.textContent = 'Offline';
+            }
         } else {
             statusDisplay.textContent = 'Offline';
         }
     });
-
-    document.getElementById('send-btn').onclick = sendMessage;
-    document.getElementById('message-input').onkeyup = handleTyping;
 }
 
 function sendMessage(replyToId = null) {
@@ -146,34 +153,48 @@ function sendMessage(replyToId = null) {
 
 function displayMessage(message, messageId) {
     const container = document.getElementById('messages-container');
+    const messageBubble = document.createElement('div');
+    messageBubble.className = 'message-bubble';
+    
     const messageElement = document.createElement('div');
     messageElement.className = 'message';
+    
     if (message.senderId === currentUser.uid) {
+        messageBubble.classList.add('my-message');
         messageElement.classList.add('my-message');
     }
     
     if (message.isDeleted) {
         messageElement.textContent = "This message was deleted.";
     } else {
-        const messageText = document.createElement('p');
-        messageText.textContent = message.text;
-        messageElement.appendChild(messageText);
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        messageContent.textContent = message.text;
+        messageElement.appendChild(messageContent);
 
+        const actions = document.createElement('div');
+        actions.className = 'message-actions';
+        
         const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Delete';
+        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        deleteBtn.title = "Delete";
         deleteBtn.onclick = () => deleteMessage(messageId);
-        messageElement.appendChild(deleteBtn);
+        actions.appendChild(deleteBtn);
 
         const replyBtn = document.createElement('button');
-        replyBtn.textContent = 'Reply';
+        replyBtn.innerHTML = '<i class="fas fa-reply"></i>';
+        replyBtn.title = "Reply";
         replyBtn.onclick = () => {
             const input = document.getElementById('message-input');
             input.focus();
             document.getElementById('send-btn').onclick = () => sendMessage(messageId);
         };
-        messageElement.appendChild(replyBtn);
+        actions.appendChild(replyBtn);
+
+        messageElement.appendChild(actions);
     }
-    container.appendChild(messageElement);
+    messageBubble.appendChild(messageElement);
+    container.appendChild(messageBubble);
 }
 
 function deleteMessage(messageId) {
@@ -199,7 +220,15 @@ function setTypingStatus(isTyping) {
     }
 }
 
+// This is a placeholder. You need to fetch the conversation members from the database
+// to find the other user's ID.
+function getOtherUser(conversationId) {
+    // This function would query the database to find the other user
+    // For a one-on-one chat, it would look up the 'members' node of the conversation
+    // and return the ID that is not the current user's.
+    return "otherUserIdPlaceholder"; 
+}
+
 function generateInviteId() {
     return Math.random().toString(36).substring(2, 8);
 }
-
