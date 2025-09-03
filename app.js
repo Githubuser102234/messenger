@@ -8,6 +8,7 @@ const database = getDatabase(app);
 let currentUser = null;
 let currentConversationId = null;
 let typingTimeout;
+let conversationMembers = {};
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -42,14 +43,67 @@ function showInboxScreen() {
     document.getElementById('inbox-screen').classList.add('active');
     document.getElementById('chat-screen').classList.remove('active');
     document.getElementById('new-message-btn').onclick = createNewConversation;
+
+    // Fetch and render the user's conversations
+    const inboxList = document.getElementById('inbox-list');
+    inboxList.innerHTML = ''; // Clear the list before rendering
+    
+    const conversationsRef = ref(database, 'conversations');
+    const myConversationsQuery = query(conversationsRef, orderByChild(`members/${currentUser.uid}`), equalTo(true));
+    
+    onValue(myConversationsQuery, (snapshot) => {
+        inboxList.innerHTML = '';
+        snapshot.forEach((childSnapshot) => {
+            const conversation = childSnapshot.val();
+            const conversationId = childSnapshot.key;
+            conversationMembers[conversationId] = conversation.members;
+
+            const inboxItem = document.createElement('li');
+            inboxItem.className = 'inbox-item';
+            inboxItem.textContent = "Chat " + conversationId.substring(1, 5);
+            inboxItem.onclick = () => openChatRoom(conversationId);
+
+            const actionsContainer = document.createElement('div');
+            actionsContainer.className = 'inbox-item-actions';
+
+            // Delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+            deleteBtn.title = "Delete Chat";
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation(); // Prevent opening the chat
+                if (confirm('Are you sure you want to delete this chat? This cannot be undone.')) {
+                    remove(ref(database, 'conversations/' + conversationId));
+                    remove(ref(database, 'messages/' + conversationId));
+                }
+            };
+            actionsContainer.appendChild(deleteBtn);
+
+            // Link button (only if chat is a new invite)
+            if (conversation.invitation) {
+                const linkBtn = document.createElement('button');
+                linkBtn.innerHTML = '<i class="fas fa-link"></i>';
+                linkBtn.title = "Copy Invite Link";
+                linkBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const inviteLink = `https://githubuser102234.github.io/messenger/?inviteid=${conversation.invitation.inviteId}`;
+                    navigator.clipboard.writeText(inviteLink).then(() => {
+                        alert('Link copied to clipboard!');
+                    });
+                };
+                actionsContainer.appendChild(linkBtn);
+            }
+
+            inboxItem.appendChild(actionsContainer);
+            inboxList.appendChild(inboxItem);
+        });
+    });
 }
 
 function showChatScreen() {
     document.getElementById('inbox-screen').classList.remove('active');
     document.getElementById('chat-screen').classList.add('active');
     document.getElementById('back-to-inbox-btn').onclick = showInboxScreen;
-    document.getElementById('send-btn').onclick = sendMessage;
-    document.getElementById('message-input').onkeyup = handleTyping;
 }
 
 function createNewConversation() {
@@ -66,7 +120,7 @@ function createNewConversation() {
             creator: currentUser.uid
         }
     }).then(() => {
-        const inviteLink = `${window.location.origin}/?inviteid=${inviteId}`;
+        const inviteLink = `https://githubuser102234.github.io/messenger/?inviteid=${inviteId}`;
         alert(`Your new conversation is created. Share this link: ${inviteLink}`);
         openChatRoom(conversationId);
     });
@@ -104,6 +158,22 @@ function openChatRoom(conversationId) {
     document.getElementById('messages-container').innerHTML = '';
     
     const messagesRef = ref(database, 'messages/' + conversationId);
+    const chatHeader = document.getElementById('chat-header');
+    const emptyMessage = document.getElementById('empty-chat-message');
+    const messageInputArea = document.getElementById('message-input-area');
+    
+    // Check if the chat is empty (only has one member)
+    const members = conversationMembers[conversationId];
+    if (members && Object.keys(members).length < 2) {
+        chatHeader.textContent = 'Waiting for a friend...';
+        emptyMessage.style.display = 'block';
+        messageInputArea.style.display = 'none';
+    } else {
+        chatHeader.textContent = 'Chatting...'; // You could display the other user's name here
+        emptyMessage.style.display = 'none';
+        messageInputArea.style.display = 'flex';
+    }
+
     onValue(messagesRef, (snapshot) => {
         document.getElementById('messages-container').innerHTML = '';
         snapshot.forEach(childSnapshot => {
@@ -220,13 +290,13 @@ function setTypingStatus(isTyping) {
     }
 }
 
-// This is a placeholder. You need to fetch the conversation members from the database
-// to find the other user's ID.
 function getOtherUser(conversationId) {
-    // This function would query the database to find the other user
-    // For a one-on-one chat, it would look up the 'members' node of the conversation
-    // and return the ID that is not the current user's.
-    return "otherUserIdPlaceholder"; 
+    const members = conversationMembers[conversationId];
+    if (members) {
+        const otherUser = Object.keys(members).find(uid => uid !== currentUser.uid);
+        return otherUser;
+    }
+    return null;
 }
 
 function generateInviteId() {
