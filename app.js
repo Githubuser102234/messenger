@@ -48,6 +48,7 @@ function showInboxScreen() {
     const inboxList = document.getElementById('inbox-list');
     inboxList.innerHTML = ''; // Clear the list before rendering
     
+    // Updated query to find all conversations the user is a member of
     const conversationsRef = ref(database, 'conversations');
     const myConversationsQuery = query(conversationsRef, orderByChild(`members/${currentUser.uid}`), equalTo(true));
     
