@@ -39,9 +39,28 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script src="app.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDmbSVW7LSb1o4Few1W79OCSUTrhNIH_NM",
+            authDomain: "messenger-c771b.firebaseapp.com",
+            projectId: "messenger-c771b",
+            storageBucket: "messenger-c771b.firebasestorage.app",
+            messagingSenderId: "1043408588840",
+            appId: "1:1043408588840:web:dfc1a986002579da81a51d",
+            measurementId: "G-9YQNL8WWG7"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+
+        // Make Firebase objects globally available for app.js
+        window.firebaseApp = app;
+    </script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
