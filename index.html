@@ -88,6 +88,14 @@
         .inbox-item:hover {
             background-color: #f1f1f1;
         }
+        .inbox-item-actions button {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            color: var(--secondary-color);
+            cursor: pointer;
+            margin-left: 10px;
+        }
 
         #new-message-btn {
             background-color: var(--success-color);
@@ -110,6 +118,13 @@
             background-color: var(--chat-bg);
             display: flex;
             flex-direction: column;
+        }
+        
+        #empty-chat-message {
+            display: none;
+            text-align: center;
+            color: #888;
+            margin-top: 50px;
         }
 
         .message-bubble {
@@ -220,7 +235,9 @@
                 <h4 id="chat-header"></h4>
                 <div id="status-display"></div>
             </header>
-            <div id="messages-container"></div>
+            <div id="messages-container">
+                <div id="empty-chat-message">Sorry! Please share your link and wait for someone to join.</div>
+            </div>
             <div id="message-input-area">
                 <input type="text" id="message-input" placeholder="Type a message...">
                 <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
@@ -232,7 +249,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
 
-        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDmbSVW7LSb1o4Few1W79OCSUTrhNIH_NM",
             authDomain: "messenger-c771b.firebaseapp.com",
