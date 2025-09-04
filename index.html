@@ -291,6 +291,92 @@
             margin-bottom: 20px;
             opacity: 0.5;
         }
+
+        /* UI Alert Styles */
+        #alert-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .alert-box {
+            background-color: white;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 90%;
+            width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: alertFadeIn 0.2s ease-out;
+        }
+
+        @keyframes alertFadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .alert-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .alert-message {
+            margin-bottom: 20px;
+            line-height: 1.4;
+            color: #555;
+            white-space: pre-line;
+        }
+
+        .alert-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .alert-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .alert-btn.primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .alert-btn.primary:hover {
+            background-color: #0056b3;
+        }
+
+        .alert-btn.secondary {
+            background-color: #f8f9fa;
+            color: var(--secondary-color);
+            border: 1px solid #ddd;
+        }
+
+        .alert-btn.secondary:hover {
+            background-color: #e9ecef;
+        }
+
+        .alert-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -306,6 +392,16 @@
                 </div>
             </ul>
             <button id="new-message-btn"><i class="fas fa-plus"></i></button>
+        </div>
+
+        <!-- Custom Alert Overlay -->
+        <div id="alert-overlay">
+            <div class="alert-box">
+                <div class="alert-title" id="alert-title"></div>
+                <div class="alert-message" id="alert-message"></div>
+                <input type="text" class="alert-input" id="alert-input" style="display: none;">
+                <div class="alert-buttons" id="alert-buttons"></div>
+            </div>
         </div>
 
         <div id="chat-screen">
@@ -350,6 +446,73 @@
         let typingTimeout;
         let conversationMembers = {};
         let replyToMessageId = null;
+        let conversationListeners = {};
+
+        // Custom Alert System
+        function showAlert(title, message, type = 'info', input = false) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('alert-overlay');
+                const titleEl = document.getElementById('alert-title');
+                const messageEl = document.getElementById('alert-message');
+                const inputEl = document.getElementById('alert-input');
+                const buttonsEl = document.getElementById('alert-buttons');
+                
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                
+                // Clear previous buttons
+                buttonsEl.innerHTML = '';
+                
+                if (input) {
+                    inputEl.style.display = 'block';
+                    inputEl.value = '';
+                    inputEl.focus();
+                } else {
+                    inputEl.style.display = 'none';
+                }
+                
+                if (type === 'confirm') {
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.className = 'alert-btn secondary';
+                    cancelBtn.textContent = 'Cancel';
+                    cancelBtn.onclick = () => {
+                        overlay.style.display = 'none';
+                        resolve(false);
+                    };
+                    
+                    const confirmBtn = document.createElement('button');
+                    confirmBtn.className = 'alert-btn primary';
+                    confirmBtn.textContent = 'OK';
+                    confirmBtn.onclick = () => {
+                        overlay.style.display = 'none';
+                        resolve(input ? inputEl.value : true);
+                    };
+                    
+                    buttonsEl.appendChild(cancelBtn);
+                    buttonsEl.appendChild(confirmBtn);
+                    
+                    if (input) {
+                        inputEl.addEventListener('keypress', (e) => {
+                            if (e.key === 'Enter') {
+                                overlay.style.display = 'none';
+                                resolve(inputEl.value);
+                            }
+                        });
+                    }
+                } else {
+                    const okBtn = document.createElement('button');
+                    okBtn.className = 'alert-btn primary';
+                    okBtn.textContent = 'OK';
+                    okBtn.onclick = () => {
+                        overlay.style.display = 'none';
+                        resolve(true);
+                    };
+                    buttonsEl.appendChild(okBtn);
+                }
+                
+                overlay.style.display = 'flex';
+            });
+        }
 
         // Initialize authentication
         onAuthStateChanged(auth, (user) => {
@@ -362,7 +525,7 @@
                     initApp();
                 }).catch(error => {
                     console.error("Authentication failed:", error);
-                    alert("Failed to connect. Please refresh and try again.");
+                    showAlert("Connection Error", "Failed to connect. Please refresh and try again.");
                 });
             }
         });
@@ -423,73 +586,123 @@
         function loadConversations() {
             const inboxList = document.getElementById('inbox-list');
             
-            const conversationsRef = ref(database, 'conversations');
-            const myConversationsQuery = query(conversationsRef, orderByChild(`members/${currentUser.uid}`), equalTo(true));
+            // Clear existing listeners
+            Object.values(conversationListeners).forEach(unsubscribe => {
+                if (typeof unsubscribe === 'function') unsubscribe();
+            });
+            conversationListeners = {};
             
-            onValue(myConversationsQuery, (snapshot) => {
+            // Listen to all conversations and filter on the client side
+            const conversationsRef = ref(database, 'conversations');
+            
+            const unsubscribe = onValue(conversationsRef, (snapshot) => {
                 inboxList.innerHTML = '';
+                let hasConversations = false;
                 
-                if (!snapshot.exists()) {
+                if (snapshot.exists()) {
+                    const conversations = [];
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        const conversation = childSnapshot.val();
+                        const conversationId = childSnapshot.key;
+                        
+                        // Check if current user is a member
+                        if (conversation.members && conversation.members[currentUser.uid]) {
+                            hasConversations = true;
+                            conversations.push({
+                                id: conversationId,
+                                data: conversation
+                            });
+                            conversationMembers[conversationId] = conversation.members;
+                        }
+                    });
+                    
+                    // Sort conversations by creation time or last message
+                    conversations.sort((a, b) => {
+                        const aTime = a.data.lastActivity || a.data.invitation?.created || 0;
+                        const bTime = b.data.lastActivity || b.data.invitation?.created || 0;
+                        return bTime - aTime;
+                    });
+                    
+                    conversations.forEach(({ id: conversationId, data: conversation }) => {
+                        const inboxItem = document.createElement('li');
+                        inboxItem.className = 'inbox-item';
+                        
+                        const content = document.createElement('div');
+                        content.className = 'inbox-item-content';
+                        
+                        // Better chat naming
+                        const memberCount = Object.keys(conversation.members).length;
+                        content.textContent = memberCount === 1 ? 
+                            `Chat ${conversationId.substring(0, 6)} (Waiting...)` : 
+                            `Chat ${conversationId.substring(0, 6)}`;
+                        
+                        const actionsContainer = document.createElement('div');
+                        actionsContainer.className = 'inbox-item-actions';
+
+                        // Link button (if invitation exists)
+                        if (conversation.invitation) {
+                            const linkBtn = document.createElement('button');
+                            linkBtn.innerHTML = '<i class="fas fa-link"></i>';
+                            linkBtn.title = "Copy Invite Link";
+                            linkBtn.onclick = async (e) => {
+                                e.stopPropagation();
+                                const inviteLink = `${window.location.origin}${window.location.pathname}?inviteid=${conversation.invitation.inviteId}`;
+                                try {
+                                    await navigator.clipboard.writeText(inviteLink);
+                                    showAlert("Link Copied", "Invite link copied to clipboard!");
+                                } catch (err) {
+                                    showAlert("Invite Link", inviteLink, 'info', true);
+                                }
+                            };
+                            actionsContainer.appendChild(linkBtn);
+                        }
+
+                        // Delete button
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                        deleteBtn.title = "Delete Chat";
+                        deleteBtn.onclick = async (e) => {
+                            e.stopPropagation();
+                            const confirmed = await showAlert(
+                                "Delete Chat", 
+                                "Are you sure you want to delete this chat? This cannot be undone.", 
+                                'confirm'
+                            );
+                            if (confirmed) {
+                                try {
+                                    await remove(ref(database, 'conversations/' + conversationId));
+                                    await remove(ref(database, 'messages/' + conversationId));
+                                    showAlert("Success", "Chat deleted successfully.");
+                                } catch (error) {
+                                    console.error("Error deleting chat:", error);
+                                    showAlert("Error", "Failed to delete chat. Please try again.");
+                                }
+                            }
+                        };
+                        actionsContainer.appendChild(deleteBtn);
+
+                        inboxItem.appendChild(content);
+                        inboxItem.appendChild(actionsContainer);
+                        inboxItem.onclick = () => openChatRoom(conversationId);
+                        inboxList.appendChild(inboxItem);
+                    });
+                }
+                
+                if (!hasConversations) {
                     inboxList.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-comments"></i>
                             <p>No conversations yet. Start a new chat!</p>
                         </div>
                     `;
-                    return;
                 }
-
-                snapshot.forEach((childSnapshot) => {
-                    const conversation = childSnapshot.val();
-                    const conversationId = childSnapshot.key;
-                    conversationMembers[conversationId] = conversation.members;
-
-                    const inboxItem = document.createElement('li');
-                    inboxItem.className = 'inbox-item';
-                    
-                    const content = document.createElement('div');
-                    content.className = 'inbox-item-content';
-                    content.textContent = `Chat ${conversationId.substring(0, 6)}`;
-                    
-                    const actionsContainer = document.createElement('div');
-                    actionsContainer.className = 'inbox-item-actions';
-
-                    // Link button (if invitation exists)
-                    if (conversation.invitation) {
-                        const linkBtn = document.createElement('button');
-                        linkBtn.innerHTML = '<i class="fas fa-link"></i>';
-                        linkBtn.title = "Copy Invite Link";
-                        linkBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            const inviteLink = `${window.location.origin}${window.location.pathname}?inviteid=${conversation.invitation.inviteId}`;
-                            navigator.clipboard.writeText(inviteLink).then(() => {
-                                alert('Invite link copied to clipboard!');
-                            }).catch(() => {
-                                prompt('Copy this link:', inviteLink);
-                            });
-                        };
-                        actionsContainer.appendChild(linkBtn);
-                    }
-
-                    // Delete button
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                    deleteBtn.title = "Delete Chat";
-                    deleteBtn.onclick = (e) => {
-                        e.stopPropagation();
-                        if (confirm('Are you sure you want to delete this chat? This cannot be undone.')) {
-                            remove(ref(database, 'conversations/' + conversationId));
-                            remove(ref(database, 'messages/' + conversationId));
-                        }
-                    };
-                    actionsContainer.appendChild(deleteBtn);
-
-                    inboxItem.appendChild(content);
-                    inboxItem.appendChild(actionsContainer);
-                    inboxItem.onclick = () => openChatRoom(conversationId);
-                    inboxList.appendChild(inboxItem);
-                });
+            }, (error) => {
+                console.error("Error loading conversations:", error);
+                showAlert("Error", "Failed to load conversations. Please refresh and try again.");
             });
+            
+            conversationListeners['main'] = unsubscribe;
         }
 
         function createNewConversation() {
@@ -505,15 +718,16 @@
                     inviteId: inviteId,
                     creator: currentUser.uid,
                     created: Date.now()
-                }
-            }).then(() => {
+                },
+                lastActivity: Date.now()
+            }).then(async () => {
                 const inviteLink = `${window.location.origin}${window.location.pathname}?inviteid=${inviteId}`;
                 const message = `Your new conversation is ready!\n\nShare this link to invite someone:\n${inviteLink}`;
-                alert(message);
+                await showAlert("New Conversation", message);
                 openChatRoom(conversationId);
             }).catch(error => {
                 console.error("Error creating conversation:", error);
-                alert("Failed to create conversation. Please try again.");
+                showAlert("Error", "Failed to create conversation. Please try again.");
             });
         }
 
@@ -521,7 +735,7 @@
             const conversationsRef = ref(database, 'conversations');
             const q = query(conversationsRef, orderByChild('invitation/inviteId'), equalTo(inviteId));
 
-            get(q).then(snapshot => {
+            get(q).then(async snapshot => {
                 if (snapshot.exists()) {
                     const conversationData = snapshot.val();
                     const conversationId = Object.keys(conversationData)[0];
@@ -535,26 +749,27 @@
 
                     // Check if conversation is full
                     if (Object.keys(conversation.members).length >= 2) {
-                        alert('This conversation is already full!');
+                        await showAlert("Chat Full", "This conversation is already full!");
                         showInboxScreen();
                         return;
                     }
 
                     // Join the conversation
                     const membersRef = ref(database, `conversations/${conversationId}/members`);
-                    set(ref(membersRef, currentUser.uid), true).then(() => {
+                    set(ref(membersRef, currentUser.uid), true).then(async () => {
                         // Remove invitation since chat is now full
-                        remove(ref(database, `conversations/${conversationId}/invitation`));
-                        alert('You have joined the conversation!');
+                        await remove(ref(database, `conversations/${conversationId}/invitation`));
+                        await update(ref(database, `conversations/${conversationId}`), { lastActivity: Date.now() });
+                        await showAlert("Success", "You have joined the conversation!");
                         openChatRoom(conversationId);
                     });
                 } else {
-                    alert('Invalid or expired invite link.');
+                    await showAlert("Invalid Link", "Invalid or expired invite link.");
                     showInboxScreen();
                 }
-            }).catch(error => {
+            }).catch(async error => {
                 console.error("Error joining conversation:", error);
-                alert("Failed to join conversation. Please try again.");
+                await showAlert("Error", "Failed to join conversation. Please try again.");
                 showInboxScreen();
             });
         }
@@ -660,7 +875,7 @@
                 setTypingStatus(false);
             }).catch(error => {
                 console.error("Error sending message:", error);
-                alert("Failed to send message. Please try again.");
+                showAlert("Error", "Failed to send message. Please try again.");
             });
         }
 
@@ -690,9 +905,10 @@
                     const deleteBtn = document.createElement('button');
                     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
                     deleteBtn.title = "Delete";
-                    deleteBtn.onclick = (e) => {
+                    deleteBtn.onclick = async (e) => {
                         e.stopPropagation();
-                        if (confirm('Delete this message?')) {
+                        const confirmed = await showAlert("Delete Message", "Delete this message?", 'confirm');
+                        if (confirmed) {
                             deleteMessage(messageId);
                         }
                     };
