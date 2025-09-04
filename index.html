@@ -14,8 +14,12 @@
             --chat-bg: #e9ecef;
             --my-message-bg: #007bff;
             --my-message-text: #ffffff;
-            --other-message-bg: #f0f0f0;
+            --other-message-bg: #ffffff;
             --other-message-text: #212529;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
@@ -38,8 +42,7 @@
             flex-direction: column;
             width: 100%;
             height: 100%;
-            padding: 15px;
-            box-sizing: border-box;
+            padding: 0;
         }
 
         #inbox-screen.active, #chat-screen.active {
@@ -50,14 +53,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
+            padding: 15px 20px;
             border-bottom: 1px solid #ddd;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         #chat-header {
             flex-grow: 1;
             text-align: center;
             margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
         }
 
         .action-button {
@@ -66,6 +73,13 @@
             font-size: 1.5rem;
             color: var(--primary-color);
             cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .action-button:hover {
+            background-color: rgba(0, 123, 255, 0.1);
         }
 
         #inbox-list {
@@ -77,24 +91,43 @@
         }
 
         .inbox-item {
-            padding: 15px;
+            padding: 15px 20px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
             transition: background-color 0.2s;
+            background-color: white;
         }
+        
         .inbox-item:hover {
-            background-color: #f1f1f1;
+            background-color: #f8f9fa;
         }
+        
+        .inbox-item-content {
+            flex-grow: 1;
+        }
+        
+        .inbox-item-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
         .inbox-item-actions button {
             background: none;
             border: none;
             font-size: 1rem;
             color: var(--secondary-color);
             cursor: pointer;
-            margin-left: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .inbox-item-actions button:hover {
+            background-color: rgba(108, 117, 125, 0.1);
+            color: var(--primary-color);
         }
 
         #new-message-btn {
@@ -108,16 +141,24 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+            z-index: 1000;
+        }
+
+        #new-message-btn:hover {
+            background-color: #218838;
+            transform: scale(1.05);
         }
 
         #messages-container {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 10px;
+            padding: 15px;
             background-color: var(--chat-bg);
             display: flex;
             flex-direction: column;
+            gap: 10px;
         }
         
         #empty-chat-message {
@@ -125,12 +166,13 @@
             text-align: center;
             color: #888;
             margin-top: 50px;
+            font-style: italic;
         }
 
         .message-bubble {
             display: flex;
-            margin-bottom: 10px;
             max-width: 80%;
+            margin-bottom: 5px;
         }
 
         .message-bubble.my-message {
@@ -139,27 +181,36 @@
         }
 
         .message {
-            padding: 10px 15px;
-            border-radius: 20px;
-            color: var(--other-message-text);
+            padding: 12px 16px;
+            border-radius: 18px;
             background-color: var(--other-message-bg);
+            color: var(--other-message-text);
             position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            word-wrap: break-word;
         }
 
-        .message.my-message .message-content {
+        .message-bubble.my-message .message {
             background-color: var(--my-message-bg);
             color: var(--my-message-text);
+        }
+
+        .message.deleted {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            font-style: italic;
         }
 
         .message-actions {
             display: none;
             position: absolute;
-            top: 0;
+            top: -10px;
             right: -10px;
-            background-color: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             padding: 5px;
+            gap: 2px;
         }
 
         .message-bubble:hover .message-actions {
@@ -169,18 +220,23 @@
         .message-actions button {
             background-color: transparent;
             border: none;
-            padding: 5px;
+            padding: 6px;
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            color: var(--secondary-color);
         }
+        
         .message-actions button:hover {
+            background-color: rgba(0, 123, 255, 0.1);
             color: var(--primary-color);
         }
 
         #message-input-area {
             display: flex;
             align-items: center;
-            padding: 10px;
+            padding: 15px 20px;
             border-top: 1px solid #ddd;
             background-color: white;
         }
@@ -188,10 +244,15 @@
         #message-input {
             flex-grow: 1;
             border: 1px solid #ddd;
-            border-radius: 20px;
-            padding: 10px 15px;
+            border-radius: 25px;
+            padding: 12px 20px;
             font-size: 1rem;
             outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #message-input:focus {
+            border-color: var(--primary-color);
         }
 
         #send-btn {
@@ -199,23 +260,36 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 45px;
-            height: 45px;
+            width: 50px;
+            height: 50px;
             margin-left: 10px;
             font-size: 1.2rem;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.2s;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+            transition: all 0.2s;
         }
+        
         #send-btn:hover {
             background-color: #0056b3;
+            transform: scale(1.05);
         }
 
         #status-display {
             font-size: 0.8rem;
-            color: #888;
-            margin-bottom: 5px;
+            color: var(--secondary-color);
+            margin-left: 15px;
+        }
+
+        .empty-state {
             text-align: center;
+            padding: 40px 20px;
+            color: var(--secondary-color);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
         }
     </style>
 </head>
@@ -225,21 +299,26 @@
             <header>
                 <h3>Your Inbox</h3>
             </header>
-            <ul id="inbox-list"></ul>
+            <ul id="inbox-list">
+                <div class="empty-state">
+                    <i class="fas fa-comments"></i>
+                    <p>No conversations yet. Start a new chat!</p>
+                </div>
+            </ul>
             <button id="new-message-btn"><i class="fas fa-plus"></i></button>
         </div>
 
         <div id="chat-screen">
             <header>
                 <button id="back-to-inbox-btn" class="action-button"><i class="fas fa-arrow-left"></i></button>
-                <h4 id="chat-header"></h4>
+                <h4 id="chat-header">Chat</h4>
                 <div id="status-display"></div>
             </header>
             <div id="messages-container">
-                <div id="empty-chat-message">Sorry! Please share your link and wait for someone to join.</div>
+                <div id="empty-chat-message">Share your invite link and wait for someone to join!</div>
             </div>
             <div id="message-input-area">
-                <input type="text" id="message-input" placeholder="Type a message...">
+                <input type="text" id="message-input" placeholder="Type a message..." maxlength="500">
                 <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
@@ -248,6 +327,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+        import { getDatabase, ref, push, set, get, query, orderByChild, equalTo, onValue, onDisconnect, update, remove } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDmbSVW7LSb1o4Few1W79OCSUTrhNIH_NM",
@@ -261,8 +342,425 @@
 
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
-        window.firebaseApp = app;
+        const auth = getAuth(app);
+        const database = getDatabase(app);
+
+        let currentUser = null;
+        let currentConversationId = null;
+        let typingTimeout;
+        let conversationMembers = {};
+        let replyToMessageId = null;
+
+        // Initialize authentication
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                initApp();
+            } else {
+                signInAnonymously(auth).then(userCredential => {
+                    currentUser = userCredential.user;
+                    initApp();
+                }).catch(error => {
+                    console.error("Authentication failed:", error);
+                    alert("Failed to connect. Please refresh and try again.");
+                });
+            }
+        });
+
+        function initApp() {
+            const params = new URLSearchParams(window.location.search);
+            const inviteId = params.get('inviteid');
+
+            if (inviteId) {
+                joinConversation(inviteId);
+            } else {
+                showInboxScreen();
+            }
+
+            // Set up user presence
+            const userStatusRef = ref(database, 'status/' + currentUser.uid);
+            onDisconnect(userStatusRef).update({ online: false, typing: null });
+            update(userStatusRef, { online: true, typing: null });
+
+            // Set up event listeners
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('new-message-btn').addEventListener('click', createNewConversation);
+            document.getElementById('back-to-inbox-btn').addEventListener('click', showInboxScreen);
+            document.getElementById('send-btn').addEventListener('click', () => sendMessage());
+            
+            const messageInput = document.getElementById('message-input');
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                } else {
+                    handleTyping();
+                }
+            });
+            
+            messageInput.addEventListener('input', handleTyping);
+        }
+
+        function showInboxScreen() {
+            document.getElementById('inbox-screen').classList.add('active');
+            document.getElementById('chat-screen').classList.remove('active');
+            currentConversationId = null;
+            replyToMessageId = null;
+
+            // Clear URL parameters
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            loadConversations();
+        }
+
+        function showChatScreen() {
+            document.getElementById('inbox-screen').classList.remove('active');
+            document.getElementById('chat-screen').classList.add('active');
+        }
+
+        function loadConversations() {
+            const inboxList = document.getElementById('inbox-list');
+            
+            const conversationsRef = ref(database, 'conversations');
+            const myConversationsQuery = query(conversationsRef, orderByChild(`members/${currentUser.uid}`), equalTo(true));
+            
+            onValue(myConversationsQuery, (snapshot) => {
+                inboxList.innerHTML = '';
+                
+                if (!snapshot.exists()) {
+                    inboxList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-comments"></i>
+                            <p>No conversations yet. Start a new chat!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                snapshot.forEach((childSnapshot) => {
+                    const conversation = childSnapshot.val();
+                    const conversationId = childSnapshot.key;
+                    conversationMembers[conversationId] = conversation.members;
+
+                    const inboxItem = document.createElement('li');
+                    inboxItem.className = 'inbox-item';
+                    
+                    const content = document.createElement('div');
+                    content.className = 'inbox-item-content';
+                    content.textContent = `Chat ${conversationId.substring(0, 6)}`;
+                    
+                    const actionsContainer = document.createElement('div');
+                    actionsContainer.className = 'inbox-item-actions';
+
+                    // Link button (if invitation exists)
+                    if (conversation.invitation) {
+                        const linkBtn = document.createElement('button');
+                        linkBtn.innerHTML = '<i class="fas fa-link"></i>';
+                        linkBtn.title = "Copy Invite Link";
+                        linkBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            const inviteLink = `${window.location.origin}${window.location.pathname}?inviteid=${conversation.invitation.inviteId}`;
+                            navigator.clipboard.writeText(inviteLink).then(() => {
+                                alert('Invite link copied to clipboard!');
+                            }).catch(() => {
+                                prompt('Copy this link:', inviteLink);
+                            });
+                        };
+                        actionsContainer.appendChild(linkBtn);
+                    }
+
+                    // Delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                    deleteBtn.title = "Delete Chat";
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        if (confirm('Are you sure you want to delete this chat? This cannot be undone.')) {
+                            remove(ref(database, 'conversations/' + conversationId));
+                            remove(ref(database, 'messages/' + conversationId));
+                        }
+                    };
+                    actionsContainer.appendChild(deleteBtn);
+
+                    inboxItem.appendChild(content);
+                    inboxItem.appendChild(actionsContainer);
+                    inboxItem.onclick = () => openChatRoom(conversationId);
+                    inboxList.appendChild(inboxItem);
+                });
+            });
+        }
+
+        function createNewConversation() {
+            const newConversationRef = push(ref(database, 'conversations'));
+            const conversationId = newConversationRef.key;
+            const inviteId = generateInviteId();
+            
+            set(newConversationRef, {
+                members: {
+                    [currentUser.uid]: true
+                },
+                invitation: {
+                    inviteId: inviteId,
+                    creator: currentUser.uid,
+                    created: Date.now()
+                }
+            }).then(() => {
+                const inviteLink = `${window.location.origin}${window.location.pathname}?inviteid=${inviteId}`;
+                const message = `Your new conversation is ready!\n\nShare this link to invite someone:\n${inviteLink}`;
+                alert(message);
+                openChatRoom(conversationId);
+            }).catch(error => {
+                console.error("Error creating conversation:", error);
+                alert("Failed to create conversation. Please try again.");
+            });
+        }
+
+        function joinConversation(inviteId) {
+            const conversationsRef = ref(database, 'conversations');
+            const q = query(conversationsRef, orderByChild('invitation/inviteId'), equalTo(inviteId));
+
+            get(q).then(snapshot => {
+                if (snapshot.exists()) {
+                    const conversationData = snapshot.val();
+                    const conversationId = Object.keys(conversationData)[0];
+                    const conversation = conversationData[conversationId];
+
+                    // Check if user is already a member
+                    if (conversation.members[currentUser.uid]) {
+                        openChatRoom(conversationId);
+                        return;
+                    }
+
+                    // Check if conversation is full
+                    if (Object.keys(conversation.members).length >= 2) {
+                        alert('This conversation is already full!');
+                        showInboxScreen();
+                        return;
+                    }
+
+                    // Join the conversation
+                    const membersRef = ref(database, `conversations/${conversationId}/members`);
+                    set(ref(membersRef, currentUser.uid), true).then(() => {
+                        // Remove invitation since chat is now full
+                        remove(ref(database, `conversations/${conversationId}/invitation`));
+                        alert('You have joined the conversation!');
+                        openChatRoom(conversationId);
+                    });
+                } else {
+                    alert('Invalid or expired invite link.');
+                    showInboxScreen();
+                }
+            }).catch(error => {
+                console.error("Error joining conversation:", error);
+                alert("Failed to join conversation. Please try again.");
+                showInboxScreen();
+            });
+        }
+
+        function openChatRoom(conversationId) {
+            currentConversationId = conversationId;
+            showChatScreen();
+            
+            const messagesContainer = document.getElementById('messages-container');
+            const chatHeader = document.getElementById('chat-header');
+            const emptyMessage = document.getElementById('empty-chat-message');
+            const messageInputArea = document.getElementById('message-input-area');
+            
+            messagesContainer.innerHTML = '';
+            
+            // Check if waiting for someone to join
+            const members = conversationMembers[conversationId];
+            if (members && Object.keys(members).length < 2) {
+                chatHeader.textContent = 'Waiting for friend...';
+                emptyMessage.style.display = 'block';
+                messageInputArea.style.display = 'none';
+            } else {
+                chatHeader.textContent = 'Chat';
+                emptyMessage.style.display = 'none';
+                messageInputArea.style.display = 'flex';
+            }
+
+            // Listen for messages
+            const messagesRef = ref(database, 'messages/' + conversationId);
+            onValue(messagesRef, (snapshot) => {
+                messagesContainer.innerHTML = '';
+                if (snapshot.exists()) {
+                    const messages = [];
+                    snapshot.forEach(childSnapshot => {
+                        messages.push({
+                            id: childSnapshot.key,
+                            ...childSnapshot.val()
+                        });
+                    });
+                    
+                    // Sort messages by timestamp
+                    messages.sort((a, b) => a.timestamp - b.timestamp);
+                    
+                    messages.forEach(message => {
+                        displayMessage(message, message.id);
+                    });
+                    
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            });
+
+            // Listen for user status updates
+            setupStatusListener();
+        }
+
+        function setupStatusListener() {
+            const statusRef = ref(database, 'status');
+            onValue(statusRef, (snapshot) => {
+                const statuses = snapshot.val();
+                const otherUserId = getOtherUser(currentConversationId);
+                const statusDisplay = document.getElementById('status-display');
+                
+                if (otherUserId && statuses && statuses[otherUserId]) {
+                    const otherStatus = statuses[otherUserId];
+                    if (otherStatus.typing === currentConversationId) {
+                        statusDisplay.textContent = 'typing...';
+                        statusDisplay.style.color = '#007bff';
+                    } else if (otherStatus.online) {
+                        statusDisplay.textContent = 'online';
+                        statusDisplay.style.color = '#28a745';
+                    } else {
+                        statusDisplay.textContent = 'offline';
+                        statusDisplay.style.color = '#6c757d';
+                    }
+                } else {
+                    statusDisplay.textContent = '';
+                }
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !currentConversationId) return;
+
+            const messagesRef = ref(database, 'messages/' + currentConversationId);
+            const newMessageRef = push(messagesRef);
+            
+            const messageData = {
+                senderId: currentUser.uid,
+                text: text,
+                timestamp: Date.now(),
+                isDeleted: false
+            };
+            
+            if (replyToMessageId) {
+                messageData.replyTo = replyToMessageId;
+                replyToMessageId = null;
+            }
+            
+            set(newMessageRef, messageData).then(() => {
+                input.value = '';
+                setTypingStatus(false);
+            }).catch(error => {
+                console.error("Error sending message:", error);
+                alert("Failed to send message. Please try again.");
+            });
+        }
+
+        function displayMessage(message, messageId) {
+            const container = document.getElementById('messages-container');
+            const messageBubble = document.createElement('div');
+            messageBubble.className = 'message-bubble';
+            
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message';
+            
+            if (message.senderId === currentUser.uid) {
+                messageBubble.classList.add('my-message');
+            }
+            
+            if (message.isDeleted) {
+                messageElement.classList.add('deleted');
+                messageElement.textContent = "This message was deleted";
+            } else {
+                messageElement.textContent = message.text;
+
+                // Add message actions
+                if (!message.isDeleted) {
+                    const actions = document.createElement('div');
+                    actions.className = 'message-actions';
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                    deleteBtn.title = "Delete";
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        if (confirm('Delete this message?')) {
+                            deleteMessage(messageId);
+                        }
+                    };
+                    actions.appendChild(deleteBtn);
+
+                    const replyBtn = document.createElement('button');
+                    replyBtn.innerHTML = '<i class="fas fa-reply"></i>';
+                    replyBtn.title = "Reply";
+                    replyBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        replyToMessageId = messageId;
+                        const input = document.getElementById('message-input');
+                        input.placeholder = `Replying to: ${message.text.substring(0, 30)}${message.text.length > 30 ? '...' : ''}`;
+                        input.focus();
+                    };
+                    actions.appendChild(replyBtn);
+
+                    messageElement.appendChild(actions);
+                }
+            }
+            
+            messageBubble.appendChild(messageElement);
+            container.appendChild(messageBubble);
+        }
+
+        function deleteMessage(messageId) {
+            if (!currentConversationId) return;
+            const messageRef = ref(database, `messages/${currentConversationId}/${messageId}`);
+            update(messageRef, { isDeleted: true, text: "" });
+        }
+
+        function handleTyping() {
+            if (!currentConversationId) return;
+            setTypingStatus(true);
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                setTypingStatus(false);
+            }, 2000);
+        }
+
+        function setTypingStatus(isTyping) {
+            if (!currentUser) return;
+            const userStatusRef = ref(database, 'status/' + currentUser.uid);
+            if (isTyping && currentConversationId) {
+                update(userStatusRef, { typing: currentConversationId });
+            } else {
+                update(userStatusRef, { typing: null });
+            }
+        }
+
+        function getOtherUser(conversationId) {
+            const members = conversationMembers[conversationId];
+            if (members) {
+                return Object.keys(members).find(uid => uid !== currentUser.uid);
+            }
+            return null;
+        }
+
+        function generateInviteId() {
+            return Math.random().toString(36).substring(2, 12);
+        }
+
+        // Clear typing status when leaving page
+        window.addEventListener('beforeunload', () => {
+            if (currentUser) {
+                setTypingStatus(false);
+            }
+        });
     </script>
-    <script type="module" src="app.js"></script>
 </body>
 </html>
