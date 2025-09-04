@@ -732,85 +732,125 @@
         }
 
         function joinConversation(inviteId) {
+            console.log("Attempting to join conversation with invite ID:", inviteId);
             const conversationsRef = ref(database, 'conversations');
             
             // Get all conversations and filter client-side since Firebase nested queries can be problematic
             get(conversationsRef).then(snapshot => {
+                console.log("Fetched conversations successfully");
+                
                 if (snapshot.exists()) {
                     let foundConversation = null;
                     let foundConversationId = null;
                     
                     // Search through all conversations for matching invite ID
                     snapshot.forEach((childSnapshot) => {
-                        const conversation = childSnapshot.val();
-                        const conversationId = childSnapshot.key;
-                        
-                        if (conversation.invitation && conversation.invitation.inviteId === inviteId) {
-                            foundConversation = conversation;
-                            foundConversationId = conversationId;
+                        try {
+                            const conversation = childSnapshot.val();
+                            const conversationId = childSnapshot.key;
+                            
+                            console.log(`Checking conversation ${conversationId}:`, conversation);
+                            
+                            if (conversation && conversation.invitation && conversation.invitation.inviteId === inviteId) {
+                                console.log("Found matching conversation!");
+                                foundConversation = conversation;
+                                foundConversationId = conversationId;
+                            }
+                        } catch (parseError) {
+                            console.error("Error parsing conversation:", parseError);
                         }
                     });
 
                     if (foundConversation && foundConversationId) {
+                        console.log("Processing found conversation:", foundConversationId);
+                        
                         // Check if user is already a member
                         if (foundConversation.members && foundConversation.members[currentUser.uid]) {
+                            console.log("User is already a member, opening chat room");
                             openChatRoom(foundConversationId);
                             return;
                         }
 
                         // Check if conversation is full
-                        if (Object.keys(foundConversation.members || {}).length >= 2) {
+                        const memberCount = Object.keys(foundConversation.members || {}).length;
+                        console.log("Current member count:", memberCount);
+                        
+                        if (memberCount >= 2) {
+                            console.log("Conversation is full");
                             showAlert("Chat Full", "This conversation is already full!").then(() => {
+                                showInboxScreen();
+                            }).catch(alertError => {
+                                console.error("Alert error:", alertError);
                                 showInboxScreen();
                             });
                             return;
                         }
 
                         // Join the conversation
-                        const membersRef = ref(database, `conversations/${foundConversationId}/members`);
-                        set(ref(membersRef, currentUser.uid), true).then(() => {
-                            // Remove invitation since chat is now full
+                        console.log("Attempting to join conversation");
+                        const newMemberRef = ref(database, `conversations/${foundConversationId}/members/${currentUser.uid}`);
+                        
+                        set(newMemberRef, true).then(() => {
+                            console.log("Successfully joined conversation");
+                            
+                            // Clean up invitation
                             const invitationRef = ref(database, `conversations/${foundConversationId}/invitation`);
                             remove(invitationRef).then(() => {
-                                // Update last activity
-                                const conversationRef = ref(database, `conversations/${foundConversationId}`);
-                                update(conversationRef, { lastActivity: Date.now() }).then(() => {
-                                    showAlert("Success", "You have joined the conversation!").then(() => {
-                                        openChatRoom(foundConversationId);
-                                    });
-                                }).catch(error => {
-                                    console.error("Error updating last activity:", error);
-                                    // Still proceed even if update fails
-                                    showAlert("Success", "You have joined the conversation!").then(() => {
-                                        openChatRoom(foundConversationId);
-                                    });
-                                });
+                                console.log("Invitation removed successfully");
                             }).catch(error => {
-                                console.error("Error removing invitation:", error);
-                                // Still proceed even if invitation removal fails
-                                showAlert("Success", "You have joined the conversation!").then(() => {
-                                    openChatRoom(foundConversationId);
-                                });
+                                console.log("Could not remove invitation (non-critical):", error);
                             });
+                            
+                            // Update last activity
+                            const updateRef = ref(database, `conversations/${foundConversationId}/lastActivity`);
+                            set(updateRef, Date.now()).then(() => {
+                                console.log("Last activity updated");
+                            }).catch(error => {
+                                console.log("Could not update last activity (non-critical):", error);
+                            });
+                            
+                            // Show success and open chat
+                            showAlert("Success", "You have joined the conversation!").then(() => {
+                                openChatRoom(foundConversationId);
+                            }).catch(alertError => {
+                                console.error("Alert error:", alertError);
+                                openChatRoom(foundConversationId);
+                            });
+                            
                         }).catch(error => {
                             console.error("Error joining conversation:", error);
                             showAlert("Error", "Failed to join conversation. Please try again.").then(() => {
                                 showInboxScreen();
+                            }).catch(alertError => {
+                                console.error("Alert error:", alertError);
+                                showInboxScreen();
                             });
                         });
                     } else {
+                        console.log("No matching conversation found for invite ID:", inviteId);
                         showAlert("Invalid Link", "Invalid or expired invite link.").then(() => {
+                            showInboxScreen();
+                        }).catch(alertError => {
+                            console.error("Alert error:", alertError);
                             showInboxScreen();
                         });
                     }
                 } else {
+                    console.log("No conversations exist in database");
                     showAlert("Invalid Link", "No conversations found.").then(() => {
+                        showInboxScreen();
+                    }).catch(alertError => {
+                        console.error("Alert error:", alertError);
                         showInboxScreen();
                     });
                 }
             }).catch(error => {
                 console.error("Error fetching conversations:", error);
-                showAlert("Error", "Failed to join conversation. Please try again.").then(() => {
+                console.error("Error details:", error.message, error.stack);
+                showAlert("Error", "Failed to connect to conversations. Please try again.").then(() => {
+                    showInboxScreen();
+                }).catch(alertError => {
+                    console.error("Alert error:", alertError);
                     showInboxScreen();
                 });
             });
