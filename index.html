@@ -735,7 +735,7 @@
             const conversationsRef = ref(database, 'conversations');
             
             // Get all conversations and filter client-side since Firebase nested queries can be problematic
-            get(conversationsRef).then(async snapshot => {
+            get(conversationsRef).then(snapshot => {
                 if (snapshot.exists()) {
                     let foundConversation = null;
                     let foundConversationId = null;
@@ -760,43 +760,59 @@
 
                         // Check if conversation is full
                         if (Object.keys(foundConversation.members || {}).length >= 2) {
-                            await showAlert("Chat Full", "This conversation is already full!");
-                            showInboxScreen();
+                            showAlert("Chat Full", "This conversation is already full!").then(() => {
+                                showInboxScreen();
+                            });
                             return;
                         }
 
                         // Join the conversation
                         const membersRef = ref(database, `conversations/${foundConversationId}/members`);
-                        set(ref(membersRef, currentUser.uid), true).then(async () => {
-                            try {
-                                // Remove invitation since chat is now full
-                                await remove(ref(database, `conversations/${foundConversationId}/invitation`));
-                                await update(ref(database, `conversations/${foundConversationId}`), { lastActivity: Date.now() });
-                                await showAlert("Success", "You have joined the conversation!");
-                                openChatRoom(foundConversationId);
-                            } catch (updateError) {
-                                console.error("Error updating conversation:", updateError);
-                                // Still open the chat even if cleanup fails
-                                await showAlert("Success", "You have joined the conversation!");
-                                openChatRoom(foundConversationId);
-                            }
-                        }).catch(async joinError => {
-                            console.error("Error joining conversation:", joinError);
-                            await showAlert("Error", "Failed to join conversation. Please try again.");
-                            showInboxScreen();
+                        set(ref(membersRef, currentUser.uid), true).then(() => {
+                            // Remove invitation since chat is now full
+                            const invitationRef = ref(database, `conversations/${foundConversationId}/invitation`);
+                            remove(invitationRef).then(() => {
+                                // Update last activity
+                                const conversationRef = ref(database, `conversations/${foundConversationId}`);
+                                update(conversationRef, { lastActivity: Date.now() }).then(() => {
+                                    showAlert("Success", "You have joined the conversation!").then(() => {
+                                        openChatRoom(foundConversationId);
+                                    });
+                                }).catch(error => {
+                                    console.error("Error updating last activity:", error);
+                                    // Still proceed even if update fails
+                                    showAlert("Success", "You have joined the conversation!").then(() => {
+                                        openChatRoom(foundConversationId);
+                                    });
+                                });
+                            }).catch(error => {
+                                console.error("Error removing invitation:", error);
+                                // Still proceed even if invitation removal fails
+                                showAlert("Success", "You have joined the conversation!").then(() => {
+                                    openChatRoom(foundConversationId);
+                                });
+                            });
+                        }).catch(error => {
+                            console.error("Error joining conversation:", error);
+                            showAlert("Error", "Failed to join conversation. Please try again.").then(() => {
+                                showInboxScreen();
+                            });
                         });
                     } else {
-                        await showAlert("Invalid Link", "Invalid or expired invite link.");
-                        showInboxScreen();
+                        showAlert("Invalid Link", "Invalid or expired invite link.").then(() => {
+                            showInboxScreen();
+                        });
                     }
                 } else {
-                    await showAlert("Invalid Link", "No conversations found.");
-                    showInboxScreen();
+                    showAlert("Invalid Link", "No conversations found.").then(() => {
+                        showInboxScreen();
+                    });
                 }
-            }).catch(async error => {
-                console.error("Error joining conversation:", error);
-                await showAlert("Error", "Failed to join conversation. Please try again.");
-                showInboxScreen();
+            }).catch(error => {
+                console.error("Error fetching conversations:", error);
+                showAlert("Error", "Failed to join conversation. Please try again.").then(() => {
+                    showInboxScreen();
+                });
             });
         }
 
